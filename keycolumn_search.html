@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>欄位語意搜尋</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #111418;
+    --surface2: #1a1f26;
+    --border: #2a3040;
+    --accent: #00d4ff;
+    --accent2: #7c5cfc;
+    --text: #e8edf5;
+    --text-dim: #6b7a94;
+    --text-muted: #3d4a60;
+    --success: #00e5a0;
+    --warn: #ffb700;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'Noto Sans TC', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 48px 24px;
+  }
+
+  /* Header */
+  header {
+    margin-bottom: 48px;
+  }
+
+  .header-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+    opacity: 0.8;
+  }
+
+  h1 {
+    font-family: var(--mono);
+    font-size: clamp(24px, 4vw, 36px);
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+
+  h1 span {
+    color: var(--accent);
+  }
+
+  .subtitle {
+    margin-top: 8px;
+    font-size: 14px;
+    color: var(--text-dim);
+    font-weight: 300;
+  }
+
+  /* Search box */
+  .search-area {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .search-area::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+  }
+
+  .search-row {
+    display: flex;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .search-input-wrap {
+    flex: 1;
+    position: relative;
+  }
+
+  .search-input-wrap::before {
+    content: '›_';
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--accent);
+    pointer-events: none;
+  }
+
+  input[type="text"] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px 14px 48px;
+    font-family: var(--sans);
+    font-size: 15px;
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+
+  input[type="text"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0,212,255,0.1);
+  }
+
+  input[type="text"]::placeholder {
+    color: var(--text-muted);
+  }
+
+  .btn-search {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border: none;
+    border-radius: 8px;
+    padding: 14px 28px;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: #000;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    transition: opacity 0.2s, transform 0.1s;
+    white-space: nowrap;
+  }
+
+  .btn-search:hover { opacity: 0.85; }
+  .btn-search:active { transform: scale(0.98); }
+  .btn-search:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    gap: 24px;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .control-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+  }
+
+  input[type="range"] {
+    width: 100px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  .control-val {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    min-width: 32px;
+  }
+
+  /* Status bar */
+  .status-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    min-height: 40px;
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    flex-shrink: 0;
+  }
+
+  .status-dot.loading {
+    background: var(--warn);
+    animation: pulse 1s ease-in-out infinite;
+  }
+
+  .status-dot.success {
+    background: var(--success);
+  }
+
+  .status-dot.error {
+    background: #ff4d6d;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Results */
+  .results-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .results-count {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  .results-count span {
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+    animation: fadeIn 0.3s ease forwards;
+    opacity: 0;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .result-card:hover {
+    border-color: rgba(0,212,255,0.3);
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    cursor: pointer;
+    gap: 16px;
+  }
+
+  .card-meta {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .score-badge {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    flex-shrink: 0;
+  }
+
+  .score-high { background: rgba(0,229,160,0.15); color: var(--success); }
+  .score-mid { background: rgba(255,183,0,0.15); color: var(--warn); }
+  .score-low { background: rgba(108,123,148,0.15); color: var(--text-dim); }
+
+  .object-name {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .db-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(124,92,252,0.15);
+    color: var(--accent2);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .schema-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+
+  .card-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  .btn-download {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .btn-download:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,212,255,0.05);
+  }
+
+  .toggle-icon {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+
+  .result-card.expanded .toggle-icon {
+    transform: rotate(180deg);
+  }
+
+  .card-body {
+    display: none;
+    border-top: 1px solid var(--border);
+    padding: 16px 20px;
+  }
+
+  .result-card.expanded .card-body {
+    display: block;
+  }
+
+  .index-text {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    line-height: 1.5;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border-radius: 6px;
+    border-left: 3px solid var(--accent2);
+  }
+
+  .script-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+
+  .script-preview {
+    background: #070910;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: #a8b5cc;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 300px;
+    overflow-y: auto;
+    line-height: 1.6;
+  }
+
+  .script-preview::-webkit-scrollbar { width: 4px; }
+  .script-preview::-webkit-scrollbar-track { background: transparent; }
+  .script-preview::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* Empty / loading states */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+  }
+
+  .empty-state .icon {
+    font-size: 40px;
+    margin-bottom: 16px;
+    opacity: 0.4;
+  }
+
+  .empty-state p {
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .search-row { flex-direction: column; }
+    .card-header { flex-wrap: wrap; }
+    .controls { gap: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="header-tag">// Vector Semantic Search</div>
+    <h1>欄位語意<span>搜尋</span></h1>
+    <p class="subtitle">輸入關鍵欄位名稱，搜尋各系統中最相關的物件與腳本</p>
+  </header>
+
+  <div class="search-area">
+    <div class="search-row">
+      <div class="search-input-wrap">
+        <input type="text" id="queryInput" placeholder="例如：利潤中心、客戶編號、訂單日期..." autocomplete="off" />
+      </div>
+      <button class="btn-search" id="searchBtn" onclick="doSearch()">SEARCH</button>
+    </div>
+    <div class="controls">
+      <div class="control-group">
+        <span class="control-label">TOP_K</span>
+        <input type="range" id="topK" min="5" max="50" value="20" oninput="document.getElementById('topKVal').textContent=this.value">
+        <span class="control-val" id="topKVal">20</span>
+      </div>
+      <div class="control-group">
+        <span class="control-label">THRESHOLD</span>
+        <input type="range" id="threshold" min="0" max="100" value="70" oninput="document.getElementById('thresholdVal').textContent=(this.value/100).toFixed(2)">
+        <span class="control-val" id="thresholdVal">0.70</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-dot" id="statusDot"></div>
+    <span id="statusText">待機中，輸入關鍵字開始搜尋</span>
+  </div>
+
+  <div id="resultsArea">
+    <div class="empty-state">
+      <div class="icon">⬡</div>
+      <p>搜尋結果將顯示於此</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const WEBHOOK_URL = '/webhook/keycolumn_search';
+
+  const queryInput = document.getElementById('queryInput');
+  const searchBtn = document.getElementById('searchBtn');
+  const statusDot = document.getElementById('statusDot');
+  const statusText = document.getElementById('statusText');
+  const resultsArea = document.getElementById('resultsArea');
+
+  queryInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') doSearch();
+  });
+
+  function setStatus(type, text) {
+    statusDot.className = 'status-dot' + (type ? ' ' + type : '');
+    statusText.textContent = text;
+  }
+
+  async function doSearch() {
+    const query = queryInput.value.trim();
+    if (!query) return;
+
+    const topK = parseInt(document.getElementById('topK').value);
+    const threshold = parseFloat(document.getElementById('threshold').value) / 100;
+
+    searchBtn.disabled = true;
+    setStatus('loading', `向量化中：「${query}」...`);
+    resultsArea.innerHTML = '';
+
+    try {
+      const res = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, topK, threshold })
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+
+      const results = data.results || [];
+      setStatus('success', `搜尋完成，找到 ${results.length} 筆相關結果（關鍵字：${query}）`);
+      renderResults(results, query);
+
+    } catch (err) {
+      setStatus('error', `搜尋失敗：${err.message}`);
+      resultsArea.innerHTML = `<div class="empty-state"><div class="icon">✕</div><p>${err.message}</p></div>`;
+    } finally {
+      searchBtn.disabled = false;
+    }
+  }
+
+  function renderResults(results, query) {
+    if (!results.length) {
+      resultsArea.innerHTML = `<div class="empty-state"><div class="icon">○</div><p>找不到相關結果，請嘗試其他關鍵字或降低門檻值</p></div>`;
+      return;
+    }
+
+    const header = `
+      <div class="results-header">
+        <span class="results-count">共 <span>${results.length}</span> 筆結果</span>
+      </div>`;
+
+    const cards = results.map((r, i) => {
+      const score = r.score || 0;
+      const scoreClass = score >= 0.85 ? 'score-high' : score >= 0.75 ? 'score-mid' : 'score-low';
+      const scoreLabel = (score * 100).toFixed(1) + '%';
+      const delay = Math.min(i * 30, 300);
+
+      return `
+        <div class="result-card" style="animation-delay:${delay}ms" onclick="toggleCard(this)">
+          <div class="card-header">
+            <div class="card-meta">
+              <span class="score-badge ${scoreClass}">${scoreLabel}</span>
+              <span class="object-name">${escHtml(r.object_name)}</span>
+              <span class="db-tag">${escHtml(r.db_name)}</span>
+              <span class="schema-tag">${escHtml(r.schema_name || 'dbo')}</span>
+            </div>
+            <div class="card-actions">
+              <button class="btn-download" onclick="event.stopPropagation(); downloadScript('${escAttr(r.object_name)}','${escAttr(r.db_name)}', \`${escTemplate(r.script_body)}\`)">↓ Script</button>
+              <span class="toggle-icon">▼</span>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="index-text">${escHtml(r.index_text || '')}</div>
+            <div class="script-label">// SCRIPT_BODY</div>
+            <div class="script-preview">${escHtml(r.script_body || '（無內容）')}</div>
+          </div>
+        </div>`;
+    }).join('');
+
+    resultsArea.innerHTML = header + cards;
+  }
+
+  function toggleCard(card) {
+    card.classList.toggle('expanded');
+  }
+
+  function downloadScript(objectName, dbName, scriptBody) {
+    const blob = new Blob([scriptBody], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${dbName}_${objectName}.sql`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  function escHtml(str) {
+    return String(str || '')
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  function escAttr(str) {
+    return String(str || '').replace(/'/g,"\\'").replace(/"/g,'\\"');
+  }
+
+  function escTemplate(str) {
+    return String(str || '').replace(/`/g,'\\`').replace(/\$/g,'\\$');
+  }
+</script>
+</body>
+</html>
